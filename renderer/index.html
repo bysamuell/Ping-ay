@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pingay — Network Diagnostic Tool</title>
+  <meta name="description" content="Ferramenta de diagnóstico de rede corporativa com ping, traceroute, DNS e port scanner."/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Title Bar ─────────────────────────────────────────────────────── -->
+  <header id="titlebar">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+        <path d="M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
+      </svg>
+      Ping<span>ay</span>
+    </div>
+
+    <div class="status-bar" id="global-status">
+      <div class="status-item">
+        <div class="dot" id="global-dot"></div>
+        <span id="global-label">Nenhum host</span>
+      </div>
+      <div class="status-item">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span id="hosts-count">0 hosts</span>
+      </div>
+      <div class="status-item">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <span id="avg-latency">—</span>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="win-controls">
+      <button class="win-btn" id="btn-min" title="Minimizar">
+        <svg width="10" height="2" viewBox="0 0 10 2" fill="currentColor"><rect width="10" height="2" rx="1"/></svg>
+      </button>
+      <button class="win-btn" id="btn-max" title="Maximizar">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="8" height="8" rx="1.5"/></svg>
+      </button>
+      <button class="win-btn close" id="btn-close" title="Fechar">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l8 8M9 1L1 9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Sidebar ────────────────────────────────────────────────────────── -->
+  <aside id="sidebar">
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-tab="monitor">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Monitor
+      </div>
+      <div class="nav-item" data-tab="tracert">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
+        Traceroute
+      </div>
+      <div class="nav-item" data-tab="dns">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+        DNS Lookup
+      </div>
+      <div class="nav-item" data-tab="portscan">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        Port Scanner
+      </div>
+      <div class="nav-item" data-tab="history">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+        Histórico
+      </div>
+    </nav>
+
+    <!-- Host List -->
+    <div class="sidebar-hosts" id="sidebar-hosts">
+      <!-- populated by app.js -->
+    </div>
+
+    <button class="sidebar-add-btn" id="btn-add-host">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      Adicionar Host
+    </button>
+    <div class="sidebar-footer">
+      © 2026 bysamuell<br>
+      Todos os direitos reservados
+    </div>
+  </aside>
+
+  <!-- ── Main Content ────────────────────────────────────────────────────── -->
+  <main id="main">
+
+    <!-- Tab: Monitor -->
+    <div class="tab-content active" id="tab-monitor">
+      <div class="page-header">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <div>
+          <h1>Monitor de Rede</h1>
+          <p class="subtitle">Ping em tempo real — máx. 30 hosts</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost" id="btn-stop-all">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          Parar Todos
+        </button>
+        <button class="btn btn-primary" id="btn-start-all">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Iniciar Todos
+        </button>
+      </div>
+
+      <div class="toolbar">
+        <span style="font-size:12px;color:var(--text-2)" id="ping-summary">Aguardando...</span>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost" id="btn-add-host-2" style="font-size:12px;padding:5px 10px">
+          + Adicionar Host
+        </button>
+      </div>
+
+      <div id="ping-grid">
+        <div class="empty-state" id="ping-empty">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <p>Nenhum host adicionado</p>
+          <small>Clique em "Adicionar Host" para começar a monitorar</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Traceroute -->
+    <div class="tab-content" id="tab-tracert">
+      <div class="tracert-premium-view">
+        <label style="display:block; font-size: 14px; color: var(--text-2); font-weight: 500; margin-bottom: 8px;">Trace Route to Destination</label>
+        <div class="tracert-input-row">
+          <input class="input" id="tracert-host" placeholder="Ex: 8.8.8.8 ou google.com" style="flex:1; max-width:340px;"/>
+          <button class="btn btn-primary" id="btn-tracert-run">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Executar
+          </button>
+          
+          <!-- Controls -->
+          <button class="btn btn-ghost" id="btn-tracert-stop" style="display:none;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            Parar
+          </button>
+          <button class="btn btn-ghost" id="btn-tracert-clear">Limpar</button>
+          <span id="tracert-status" style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-3);"></span>
+        </div>
+
+        <div class="tracert-table-container">
+          <div class="tracert-th">
+            <span class="th-hop">Hop</span>
+            <span class="th-ip">IP Address</span>
+            <span class="th-rtt">RTT</span>
+          </div>
+          <div id="tracert-output"></div>
+          <div class="tracert-footer" id="tracert-footer" style="display: none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Trace complete
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: DNS -->
+    <div class="tab-content" id="tab-dns">
+      <div class="page-header">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+        <div>
+          <h1>DNS Lookup</h1>
+          <p class="subtitle">Resolução de nomes e registros DNS</p>
+        </div>
+      </div>
+      <div class="content-wrap">
+        <div class="dns-input-row">
+          <input class="input" id="dns-host" placeholder="Ex: google.com ou 8.8.8.8" style="max-width:300px"/>
+          <select class="select" id="dns-type">
+            <option value="A">A (IPv4)</option>
+            <option value="AAAA">AAAA (IPv6)</option>
+            <option value="MX">MX (Mail)</option>
+            <option value="NS">NS (Nameserver)</option>
+            <option value="CNAME">CNAME</option>
+            <option value="PTR">PTR (Reverso)</option>
+          </select>
+          <button class="btn btn-primary" id="btn-dns-lookup">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            Consultar
+          </button>
+          <button class="btn btn-ghost" id="btn-dns-clear">Limpar</button>
+          <span id="dns-spinner"></span>
+        </div>
+        <div id="dns-output">Aguardando consulta...</div>
+      </div>
+    </div>
+
+    <!-- Tab: Port Scanner -->
+    <div class="tab-content" id="tab-portscan">
+      <div class="page-header">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        <div>
+          <h1>Port Scanner</h1>
+          <p class="subtitle">Verifica portas abertas/fechadas em um host</p>
+        </div>
+      </div>
+      <div class="content-wrap">
+        <div class="portscan-input-row">
+          <input class="input" id="ps-host" placeholder="Host ou IP" style="max-width:220px"/>
+          <input class="input" id="ps-ports" placeholder="Ex: 22,80,443,3389,8080" style="max-width:260px"/>
+          <button class="btn btn-primary" id="btn-ps-scan">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            Escanear
+          </button>
+          <span id="ps-spinner"></span>
+        </div>
+
+        <div>
+          <p style="font-size:11px;color:var(--text-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Predefinições</p>
+          <div class="port-presets">
+            <button class="port-preset-btn" data-ports="21,22,23,25,53,80,110,143,443,3389">Comuns</button>
+            <button class="port-preset-btn" data-ports="80,443,8080,8443,8888,3000,4000,5000">Web</button>
+            <button class="port-preset-btn" data-ports="3306,5432,1433,1521,27017,6379">Banco de Dados</button>
+            <button class="port-preset-btn" data-ports="22,23,3389,5900,5985,5986">Remote</button>
+            <button class="port-preset-btn" data-ports="25,110,143,465,587,993,995">E-mail</button>
+            <button class="port-preset-btn" data-ports="21,22,69,115">FTP</button>
+          </div>
+        </div>
+
+        <div id="portscan-results">
+          <div class="empty-state">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+            <p>Nenhuma varredura realizada</p>
+            <small>Insira um host e portas para escanear</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: History -->
+    <div class="tab-content" id="tab-history">
+      <div class="page-header">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+        <div>
+          <h1>Histórico de Eventos</h1>
+          <p class="subtitle">Registro de quedas e reconexões</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost" id="btn-export-csv">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar CSV
+        </button>
+        <button class="btn btn-danger" id="btn-clear-history">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Limpar
+        </button>
+      </div>
+      <div class="content-wrap">
+        <div class="history-toolbar">
+          <input class="input" id="history-filter" placeholder="Filtrar por host..." style="max-width:240px"/>
+          <span id="history-count" style="font-size:12px;color:var(--text-2)"></span>
+        </div>
+        <div id="history-list">
+          <div class="empty-state">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+            <p>Nenhum evento registrado</p>
+            <small>Eventos de queda e reconexão aparecerão aqui</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main><!-- /#main -->
+</div><!-- /#app -->
+
+<!-- ── Modal: Add / Edit Host ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-host">
+  <div class="modal">
+    <h2 id="modal-title">Adicionar Host</h2>
+    <div class="field-group">
+      <label>
+        Nome / Apelido
+        <input class="input" id="host-name-input" placeholder="Ex: Roteador Principal"/>
+      </label>
+      <label>
+        Endereços IP ou Hostnames (Separados por vírgula ou Enter)
+        <textarea class="input" id="host-addr-input" placeholder="Ex: 192.168.1.1&#10;10.0.0.1" rows="3" style="resize:vertical"></textarea>
+      </label>
+      <label>
+        Grupo
+        <select class="select" id="host-group-input" style="width:100%">
+          <option value="grp-default">Geral</option>
+        </select>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="modal-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="modal-save">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast Container ──────────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ── Scripts ──────────────────────────────────────────────────────────── -->
+<script src="js/app.js"></script>
+<script src="js/ping.js"></script>
+<script src="js/tracert.js"></script>
+<script src="js/dns.js"></script>
+<script src="js/portscan.js"></script>
+<script src="js/history.js"></script>
+</body>
+</html>
