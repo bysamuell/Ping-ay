@@ -394,6 +394,41 @@ html, body {
   align-content: start;
 }
 
+/* Center empty state in the grid area */
+#ping-grid:has(.empty-state:not([style*="display: none"])) {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--text-3);
+  animation: fadeIn 0.5s ease;
+}
+
+.empty-state svg {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+  opacity: 0.2;
+}
+
+.empty-state p {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 4px;
+}
+
+.empty-state small {
+  font-size: 13px;
+}
+
 /* Premium Exclusive Card */
 .ping-card {
   height: 420px;

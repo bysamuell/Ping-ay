@@ -313,6 +313,26 @@ document.getElementById('btn-stop-all').addEventListener('click', () => {
   showToast('Monitoramento global pausado', 'info');
 });
 
+document.getElementById('btn-remove-all').addEventListener('click', () => {
+  if (!confirm('DESEJA REMOVER TODOS OS HOSTS? Esta ação não pode ser desfeita.')) return;
+
+  window.api.pingStopAll();
+  
+  // Clear all hosts from all groups
+  AppState.data.groups.forEach(group => {
+    group.hosts = [];
+  });
+
+  // Clear tracking state
+  for (const id in PingState) delete PingState[id];
+
+  persistData();
+  renderSidebar();
+  renderPingGrid();
+  updateStatusBar();
+  showToast('Todos os hosts foram removidos', 'info');
+});
+
 // ── System Beep ───────────────────────────────────────────────────────────
 function playOfflineBeep() {
   try {
