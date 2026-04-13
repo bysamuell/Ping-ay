@@ -207,9 +207,13 @@ window.api.onPingResult(result => {
   // Alert on status change to offline
   if (!online && wasOnline === true) {
     playOfflineBeep();
-    window.api.notify('⚠️ Host em Queda', `O host ${result.host || id} parou de responder.`);
+    const hostObj = getAllHosts().find(h => h.id === id);
+    const displayName = (hostObj && hostObj.name && hostObj.name.trim()) ? hostObj.name : (result.host || id);
+    window.api.notify(null, `▼ ${displayName} -> down`);
   } else if (online && wasOnline === false) {
-    window.api.notify('✅ Host Recuperado', `O host ${result.host || id} voltou a responder.`);
+    const hostObj = getAllHosts().find(h => h.id === id);
+    const displayName = (hostObj && hostObj.name && hostObj.name.trim()) ? hostObj.name : (result.host || id);
+    window.api.notify(null, `▲ ${displayName} -> up`);
   }
 
   updateStatusBar();

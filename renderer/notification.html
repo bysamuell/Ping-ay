@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, sans-serif;
+      pointer-events: none; /* Make it click-through by default */
+    }
+    #notif-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px;
+      height: 100vh;
+      box-sizing: border-box;
+      justify-content: flex-end; /* Corrigido: Itens agora ficam na parte inferior da janela */
+    }
+    .notif-item {
+      background: rgba(15, 20, 33, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #fff;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn 0.3s ease-out forwards;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      width: fit-content;
+      margin-left: auto; /* Align to right */
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .notif-item.fade-out {
+      animation: fadeOut 0.5s ease-in forwards;
+    }
+    @keyframes fadeOut {
+      to { opacity: 0; transform: scale(0.95); }
+    }
+    .ts { color: #8b9cb8; font-family: monospace; font-size: 11px; }
+    .status-up { color: #10b981; font-weight: bold; }
+    .status-down { color: #ef4444; font-weight: bold; }
+    .host-name { font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div id="notif-container"></div>
+
+  <script>
+    const container = document.getElementById('notif-container');
+    const MAX_NOTIFS = 5;
+
+    window.api.onNotifyUpdate((eventData) => {
+      const { id, body, timestamp } = eventData;
+      
+      const item = document.createElement('div');
+      item.className = 'notif-item';
+      
+      const isUp = body.includes('▲') || body.includes('up');
+      const statusClass = isUp ? 'status-up' : 'status-down';
+      const arrow = isUp ? '▲' : '▼';
+      const cleanBody = body.replace('▲ ', '').replace('▼ ', '').replace(' -> up', '').replace(' -> down', '');
+
+      item.innerHTML = `
+        <span class="ts">[${timestamp}]</span>
+        <span class="host-name">${cleanBody}</span>
+        <span class="${statusClass}">${isUp ? 'UP' : 'DOWN'}</span>
+      `;
+
+      container.appendChild(item);
+
+      // Manage list length
+      if (container.children.length > MAX_NOTIFS) {
+        container.children[0].classList.add('fade-out');
+        setTimeout(() => container.children[0]?.remove(), 500);
+      }
+
+      // Auto-remove after 8 seconds
+      setTimeout(() => {
+        item.classList.add('fade-out');
+        setTimeout(() => item.remove(), 500);
+      }, 8000);
+    });
+  </script>
+</body>
+</html>

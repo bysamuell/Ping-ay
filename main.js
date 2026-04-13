@@ -1,11 +1,14 @@
-const { app, BrowserWindow, ipcMain, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path   = require('path');
 const { spawn } = require('child_process');
 const fs     = require('fs');
 const net    = require('net');
 
 let mainWindow;
+let notifWindow;
 const activePings = new Map(); // id -> { interval, host, isOffline, offlineSince }
+let notificationHistory = [];
+const MAX_NOTIF_LINES = 5;
 
 // ─────────────────────────── Persistence ────────────────────────────────────
 
@@ -96,7 +99,50 @@ function createWindow() {
   if (process.argv.includes('--dev')) mainWindow.webContents.openDevTools();
 }
 
-app.whenReady().then(createWindow);
+function createNotifWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { x, y, width, height } = primaryDisplay.workArea;
+
+  const winW = 320;
+  const winH = 400; // Slightly shorter
+
+  notifWindow = new BrowserWindow({
+    width: winW,
+    height: winH,
+    x: x + width - winW - 10,
+    y: y + height - winH - 10,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: false,
+    hasShadow: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  notifWindow.loadFile(path.join(__dirname, 'renderer', 'notification.html'));
+  notifWindow.setIgnoreMouseEvents(true);
+
+  // Re-position on screen change/resize
+  screen.on('display-metrics-changed', () => {
+    const area = screen.getPrimaryDisplay().workArea;
+    if (notifWindow && !notifWindow.isDestroyed()) {
+        notifWindow.setPosition(area.x + area.width - 330, area.y + area.height - 410);
+    }
+  });
+
+  notifWindow.on('closed', () => { notifWindow = null; });
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  createNotifWindow();
+});
 
 app.on('window-all-closed', () => {
   activePings.forEach(p => clearInterval(p.interval));
@@ -250,5 +296,13 @@ ipcMain.handle('network:info', () => new Promise(resolve => {
   setTimeout(() => { try { proc.kill(); } catch (_) {} resolve(out); }, 8000);
 }));
 ipcMain.on('app:notify', (_, { title, body }) => {
-  new Notification({ title, body, icon: path.join(__dirname, 'assets', 'icon.png') }).show();
+  const now = new Date();
+  const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+  
+  const eventData = { title, body, timestamp };
+
+  // Send to our custom notification overlay
+  if (notifWindow && !notifWindow.isDestroyed()) {
+      notifWindow.webContents.send('notify:update', eventData);
+  }
 });

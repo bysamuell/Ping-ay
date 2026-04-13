@@ -46,4 +46,5 @@ contextBridge.exposeInMainWorld('api', {
 
   // Notifications
   notify: (title, body) => ipcRenderer.send('app:notify', { title, body }),
+  onNotifyUpdate: (callback) => ipcRenderer.on('notify:update', (event, data) => callback(data)),
 });
