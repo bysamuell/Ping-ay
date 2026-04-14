@@ -534,6 +534,7 @@ html, body {
 .log-ts { color: var(--accent); opacity: 0.6; font-weight: 500; }
 .log-msg { color: #fff; }
 .log-entry.entry-offline .log-msg { color: #f87171; }
+.log-entry.entry-info .log-msg { color: var(--accent); opacity: 0.9; }
 
 /* Stats Grid */
 .ping-stats-bar {

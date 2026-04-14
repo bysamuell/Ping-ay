@@ -176,7 +176,8 @@ window.api.onPingResult(result => {
       sent: 0, 
       received: 0, 
       lost: 0,
-      latency: null
+      latency: null,
+      lastResolution: null
     };
   }
   
@@ -192,6 +193,12 @@ window.api.onPingResult(result => {
     state.online = false;
   }
   state.latency = latency;
+  
+  // Log DNS resolution if it's new or changed
+  if (result.resolution && state.lastResolution !== result.resolution) {
+    appendLog(id, true, null, null, `ℹ️ ${result.resolution}`);
+    state.lastResolution = result.resolution;
+  }
 
   // Update card UI
   updatePingCard(id, state, result);
@@ -250,7 +257,11 @@ function appendLog(id, online, latency, host, customMsg) {
 
   if (customMsg) {
     msg = customMsg;
-    className += ' entry-offline';
+    if (customMsg.includes('ℹ️') || customMsg.includes('Resolvido')) {
+      className += ' entry-info';
+    } else {
+      className += ' entry-offline';
+    }
   } else if (online) {
     msg = `Resposta de ${host || '...'}: ${latency} ms`;
   } else {

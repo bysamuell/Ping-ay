@@ -3,6 +3,7 @@ const path   = require('path');
 const { spawn } = require('child_process');
 const fs     = require('fs');
 const net    = require('net');
+const dns    = require('dns').promises;
 
 let mainWindow;
 let notifWindow;
@@ -42,40 +43,51 @@ function saveHistory(h) {
 // ─────────────────────────── Ping Helpers ───────────────────────────────────
 
 function parsePingOutput(output) {
-  const result = { online: false, latency: null, loss: 100 };
+  const result = { online: false, latency: null, loss: 100, raw: output };
 
-  const offline = [
-    'Request timed out', 'Esgotado o tempo limite',
-    'could not find host', 'não foi possível encontrar',
-    'unreachable', 'inacessível', 'failure', 'falha'
-  ];
-  if (offline.some(k => output.toLowerCase().includes(k.toLowerCase()))) return result;
+  // Optimized Parser: We look ONLY for success patterns. 
+  // If we find latency, it's UP. Everything else is a failure state.
+  const tMatch = output.match(/(?:time|tempo|ms)[<=](\d+)\s*ms/i);
+  
+  if (tMatch) {
+    result.online = true;
+    result.latency = parseInt(tMatch[1]);
+    result.loss = 0;
+  }
 
-  // latency: time=12ms  or  tempo=12ms
-  const tMatch = output.match(/(?:time|tempo)[<=](\d+)\s*ms/i);
-  if (tMatch) { result.online = true; result.latency = parseInt(tMatch[1]); }
-
-  // packet loss
+  // Backup loss check (if available in summary)
   const lMatch = output.match(/(\d+)%\s*(?:loss|perdido)/i);
   if (lMatch) result.loss = parseInt(lMatch[1]);
-  else if (result.online) result.loss = 0;
 
   return result;
+}
+
+async function resolveHost(host) {
+  if (net.isIP(host)) return host;
+  try {
+    const res = await dns.lookup(host);
+    return res.address;
+  } catch (e) {
+    return null;
+  }
 }
 
 function executePing(host) {
   return new Promise((resolve) => {
     let out = '';
-    const proc = spawn('ping', ['-n', '1', '-w', '2000', host], { shell: true });
+    // Force UTF-8 (65001) to ensure strings are predictable
+    const command = `chcp 65001 > nul && ping -n 1 -w 2500 ${host}`;
+    const proc = spawn('cmd.exe', ['/c', command]);
 
-    proc.stdout.on('data', d => { out += d.toString(); });
-    proc.stderr.on('data', d => { out += d.toString(); });
+    proc.stdout.on('data', d => { out += d.toString('utf8'); });
+    proc.stderr.on('data', d => { out += d.toString('utf8'); });
+    
     proc.on('close', () => resolve(parsePingOutput(out)));
 
     const timer = setTimeout(() => {
       try { proc.kill(); } catch (_) {}
-      resolve({ online: false, latency: null, loss: 100 });
-    }, 6000);
+      resolve({ online: false, latency: null, loss: 100, error: 'Timeout' });
+    }, 7000);
 
     proc.on('close', () => clearTimeout(timer));
   });
@@ -172,7 +184,22 @@ ipcMain.on('ping:start', (_, { id, host }) => {
   let offlineSince = null;
 
   const run = async () => {
-    const res = await executePing(host);
+    // Resolve host if it's a hostname
+    let target = host;
+    let resolutionMsg = null;
+
+    if (!net.isIP(host)) {
+      const resolved = await resolveHost(host);
+      if (resolved) {
+        target = resolved;
+        resolutionMsg = `Resolvido: ${host} -> ${resolved}`;
+      } else {
+        resolutionMsg = `Erro: não foi possível resolver ${host}`;
+      }
+    }
+
+    const res = await executePing(target);
+    if (resolutionMsg) res.resolution = resolutionMsg;
 
     // State-change logging
     if (!res.online && !isOffline) {
