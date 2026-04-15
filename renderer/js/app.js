@@ -275,6 +275,24 @@ async function init() {
     AppState.data.groups = [{ id: 'grp-default', name: 'Geral', hosts: [] }];
   }
 
+  // Smart Window Init
+  const smartCheck = document.getElementById('check-smart-window');
+  const smartSaved = localStorage.getItem('smartWindow') === 'true';
+  smartCheck.checked = smartSaved;
+  window.api.setSmartWindow(smartSaved);
+
+  smartCheck.addEventListener('change', (e) => {
+    const active = e.target.checked;
+    localStorage.setItem('smartWindow', active);
+    window.api.setSmartWindow(active);
+    showToast(active ? 'Janela Inteligente ativada' : 'Janela Inteligente desativada', 'info');
+  });
+
+  window.api.onSmartMode((active) => {
+    smartCheck.checked = active;
+    localStorage.setItem('smartWindow', active);
+  });
+
   renderSidebar();
   renderPingGrid();
 

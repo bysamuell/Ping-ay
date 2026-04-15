@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('api', {
   onPingResult: (cb) => {
     ipcRenderer.on('ping:result', (_, data) => cb(data));
   },
+  onPingStopped: (cb) => {
+    ipcRenderer.on('ping:stopped', (_, data) => cb(data));
+  },
   offPingResult: () => ipcRenderer.removeAllListeners('ping:result'),
 
   // Traceroute
@@ -47,4 +50,10 @@ contextBridge.exposeInMainWorld('api', {
   // Notifications
   notify: (title, body) => ipcRenderer.send('app:notify', { title, body }),
   onNotifyUpdate: (callback) => ipcRenderer.on('notify:update', (event, data) => callback(data)),
+
+  // Smart Window
+  setSmartWindow: (active) => ipcRenderer.send('app:set-smart-window', active),
+  onSmartMode: (cb) => ipcRenderer.on('smart:mode', (_, data) => cb(data)),
+  smartCloseWindow: () => ipcRenderer.send('smart:close-window'),
+  smartMinWindow: ()   => ipcRenderer.send('smart:minimize-window')
 });

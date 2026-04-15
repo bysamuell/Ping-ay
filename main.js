@@ -7,6 +7,8 @@ const dns    = require('dns').promises;
 
 let mainWindow;
 let notifWindow;
+let smartWindow;
+let smartWindowEnabled = false;
 const activePings = new Map(); // id -> { interval, host, isOffline, offlineSince }
 let notificationHistory = [];
 const MAX_NOTIF_LINES = 5;
@@ -75,8 +77,8 @@ async function resolveHost(host) {
 function executePing(host) {
   return new Promise((resolve) => {
     let out = '';
-    // Force UTF-8 (65001) to ensure strings are predictable
-    const command = `chcp 65001 > nul && ping -n 1 -w 2500 ${host}`;
+    // Timeout de 900ms no comando para garantir o ciclo de 1s
+    const command = `chcp 65001 > nul && ping -n 1 -w 900 ${host}`;
     const proc = spawn('cmd.exe', ['/c', command]);
 
     proc.stdout.on('data', d => { out += d.toString('utf8'); });
@@ -87,7 +89,7 @@ function executePing(host) {
     const timer = setTimeout(() => {
       try { proc.kill(); } catch (_) {}
       resolve({ online: false, latency: null, loss: 100, error: 'Timeout' });
-    }, 7000);
+    }, 1500);
 
     proc.on('close', () => clearTimeout(timer));
   });
@@ -109,6 +111,51 @@ function createWindow() {
   });
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   if (process.argv.includes('--dev')) mainWindow.webContents.openDevTools();
+
+  mainWindow.on('minimize', () => {
+    if (smartWindowEnabled) createSmartWindow();
+  });
+
+  mainWindow.on('restore', () => {
+    if (smartWindow && !smartWindow.isDestroyed()) {
+      smartWindow.close();
+      smartWindow = null;
+    }
+  });
+}
+
+function createSmartWindow() {
+  if (smartWindow && !smartWindow.isDestroyed()) return;
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { x, y, width, height } = primaryDisplay.workArea;
+
+  const winW = 680;
+  const winH = 450;
+
+  smartWindow = new BrowserWindow({
+    width: winW, height: winH,
+    x: x + width - winW - 30,
+    y: y + height - winH - 30,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: true,
+    backgroundColor: '#0a0e1a',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  smartWindow.loadFile(path.join(__dirname, 'renderer', 'smart-window.html'));
+  
+  smartWindow.on('closed', () => { 
+    smartWindow = null; 
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('smart:mode-changed', false);
+    }
+  });
 }
 
 function createNotifWindow() {
@@ -218,6 +265,9 @@ ipcMain.on('ping:start', (_, { id, host }) => {
     if (!mainWindow.isDestroyed()) {
       mainWindow.webContents.send('ping:result', { id, host, ...res, timestamp: new Date().toISOString() });
     }
+    if (smartWindow && !smartWindow.isDestroyed()) {
+      smartWindow.webContents.send('ping:result', { id, host, ...res, timestamp: new Date().toISOString() });
+    }
   };
 
   run();
@@ -227,7 +277,17 @@ ipcMain.on('ping:start', (_, { id, host }) => {
 
 ipcMain.on('ping:stop', (_, { id }) => {
   const p = activePings.get(id);
-  if (p) { clearInterval(p.interval); activePings.delete(id); }
+  if (p) {
+    if (p.interval) clearInterval(p.interval);
+    if (p.timer) clearTimeout(p.timer); // Cleanup fallback
+    activePings.delete(id);
+    // Notify ALL windows that it stopped
+    [mainWindow, notifWindow, smartWindow].forEach(win => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('ping:stopped', { id });
+      }
+    });
+  }
 });
 
 ipcMain.on('ping:stop-all', () => {
@@ -322,14 +382,23 @@ ipcMain.handle('network:info', () => new Promise(resolve => {
   proc.on('close', () => resolve(out));
   setTimeout(() => { try { proc.kill(); } catch (_) {} resolve(out); }, 8000);
 }));
-ipcMain.on('app:notify', (_, { title, body }) => {
-  const now = new Date();
-  const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-  
-  const eventData = { title, body, timestamp };
 
-  // Send to our custom notification overlay
+ipcMain.on('app:notify', (_, { title, body }) => {
+  const timestamp = new Date().toLocaleTimeString('pt-BR', { hour12: false });
   if (notifWindow && !notifWindow.isDestroyed()) {
-      notifWindow.webContents.send('notify:update', eventData);
+    notifWindow.webContents.send('notify:update', { body, timestamp });
   }
+});
+
+// Smart Window IPCs
+ipcMain.on('app:set-smart-window', (_, active) => {
+  smartWindowEnabled = active;
+});
+
+ipcMain.on('smart:close-window', () => {
+  if (smartWindow && !smartWindow.isDestroyed()) smartWindow.close();
+});
+
+ipcMain.on('smart:minimize-window', () => {
+  if (smartWindow && !smartWindow.isDestroyed()) smartWindow.minimize();
 });

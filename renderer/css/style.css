@@ -602,6 +602,29 @@ html, body {
 }
 .ping-card-footer .stop-btn svg { width: 12px; height: 12px; fill: #fff; }
 
+.ping-card-footer .start-btn {
+  background: #10b981;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.ping-card-footer .start-btn:hover { 
+  background: #059669; 
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+.ping-card-footer .start-btn svg { width: 12px; height: 12px; fill: #fff; }
+
 /* ─── Empty State ─────────────────────────────────────────────────────── */
 .empty-state {
   display: flex;
@@ -946,3 +969,150 @@ html, body {
 }
 
 .ping-card { animation: fadeIn 0.3s ease; }
+
+/* Switch Component (Janela Inteligente) */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+}
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(255,255,255,0.1);
+  transition: .4s;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #fff;
+  transition: .4s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+input:checked + .slider {
+  background-color: var(--accent);
+}
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--accent);
+}
+input:checked + .slider:before {
+  transform: translateX(14px);
+}
+.slider.round {
+  border-radius: 20px;
+}
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* Smart Window Grid specific */
+body.smart-view {
+  background: #0f1421 !important;
+  color: #fff;
+  overflow: hidden;
+}
+#smart-header {
+  height: 35px;
+  background: #111827;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  -webkit-app-region: drag;
+}
+#smart-header .title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  opacity: 0.8;
+  flex: 1;
+}
+#smart-header .controls {
+  display: flex;
+  gap: 12px;
+  -webkit-app-region: no-drag;
+}
+#smart-header .ctrl-btn {
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+}
+#smart-header .ctrl-btn:hover { opacity: 1; color: var(--accent); }
+
+.mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-auto-rows: 220px; /* Slots de altura fixa e rígida */
+  gap: 12px;
+  padding: 12px;
+  overflow-y: auto;
+  max-height: calc(100vh - 35px);
+  align-content: start;
+}
+
+/* Mini Card Refinement */
+.card.mini {
+  background: rgba(15, 20, 31, 1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  display: flex !important;
+  flex-direction: column;
+  height: 220px !important; /* Altura 100% fixa */
+  margin: 0;
+  padding-bottom: 0 !important;
+  overflow: hidden;
+}
+.card.mini .card-header {
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.card.mini .mini-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.card.mini .ping-log {
+  background: rgba(0,0,0,0.4);
+  border-radius: 4px;
+  margin: 10px;
+  height: 125px; /* Ajustado para preencher o slot fixo de 220px */
+  overflow-y: auto;
+}
+.card.mini .ping-stats-bar {
+  background: rgba(255,255,255,0.03);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr) auto;
+  align-items: center;
+  padding: 10px 14px;
+  margin-top: auto; /* Garante que a barra fique no rodapé do card */
+}
+.card.mini .ping-stats-bar > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 8px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.card.mini .ping-stats-bar b {
+  font-size: 13px;
+  color: #fff;
+  font-family: monospace;
+}

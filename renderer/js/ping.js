@@ -358,3 +358,37 @@ function playOfflineBeep() {
     osc.start(); osc.stop(ctx.currentTime + 0.5);
   } catch (_) {}
 }
+// Listen for stops from other windows (e.g., Smart Window)
+window.api.onPingStopped && window.api.onPingStopped((data) => {
+  const { id } = data;
+  const card = document.getElementById('ping-card-' + id);
+  if (!card) return;
+
+  // Clean UI
+  card.className = 'card ping-card';
+  // Encontrar o botão independente da classe atual (stop ou start)
+  const btn = card.querySelector('.stop-btn') || card.querySelector('.start-btn');
+  if (btn) {
+    btn.innerHTML = `
+      <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      START
+    `;
+    btn.className = 'start-btn';
+    btn.dataset.state = 'stopped';
+    // Remover classes de animação se houver
+    btn.classList.remove('running');
+  }
+  
+  const sidebarDot = document.querySelector(`.host-item[data-host-id="${id}"] .host-dot`);
+  if (sidebarDot) sidebarDot.className = 'host-dot pending';
+  
+  appendLog(id, null, null, null, '⏸️ Monitoramento parado.');
+  
+  if (PingState[id]) {
+      PingState[id].online = null;
+      PingState[id].latency = null;
+  }
+  
+  updateStatusBar();
+  updatePingSummary();
+});
