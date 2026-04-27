@@ -1,6 +1,6 @@
 {
   "name": "pingay",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Network diagnostic tool for enterprise use",
   "main": "main.js",
   "scripts": {

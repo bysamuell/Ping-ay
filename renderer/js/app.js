@@ -223,6 +223,20 @@ function saveHost() {
     });
     const host = { id: AppState.editingId, name: nameInput || addressInput, address: addressInput };
     group.hosts.push(host);
+
+    // Stop old ping and restart with new address
+    window.api.pingStop(AppState.editingId);
+    window.api.pingStart(AppState.editingId, addressInput);
+
+    // Update the card header visually without a full re-render
+    const card = document.getElementById('ping-card-' + AppState.editingId);
+    if (card) {
+      const headerEl = card.querySelector('.host-info-header');
+      if (headerEl) headerEl.textContent = nameInput || addressInput;
+      const footerIp = card.querySelector('.footer-ip');
+      if (footerIp) footerIp.textContent = addressInput;
+    }
+
     showToast('Host atualizado', 'success');
   } else {
     // Bulk insertion logic

@@ -385,7 +385,14 @@ ipcMain.handle('network:info', () => new Promise(resolve => {
 
 ipcMain.on('app:notify', (_, { title, body }) => {
   const timestamp = new Date().toLocaleTimeString('pt-BR', { hour12: false });
-  if (notifWindow && !notifWindow.isDestroyed()) {
+  // Re-create the notification window if it was destroyed
+  if (!notifWindow || notifWindow.isDestroyed()) {
+    createNotifWindow();
+    // Wait for the window to load before sending
+    notifWindow.webContents.once('did-finish-load', () => {
+      notifWindow.webContents.send('notify:update', { body, timestamp });
+    });
+  } else {
     notifWindow.webContents.send('notify:update', { body, timestamp });
   }
 });
